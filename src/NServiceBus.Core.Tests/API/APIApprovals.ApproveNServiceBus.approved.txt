@@ -260,6 +260,19 @@ namespace NServiceBus
         InstancePerUnitOfWork = 1,
         InstancePerCall = 2,
     }
+    public class DevelopmentTransport : NServiceBus.Transports.TransportDefinition
+    {
+        public DevelopmentTransport() { }
+        public override string ExampleConnectionStringForErrorMessage { get; }
+        public override bool RequiresConnectionString { get; }
+        protected internal override NServiceBus.Transports.TransportInfrastructure Initialize(NServiceBus.Settings.SettingsHolder settings, string connectionString) { }
+    }
+    public class DevelopmentTransportHeader
+    {
+        public DevelopmentTransportHeader() { }
+        public string Key { get; set; }
+        public string Value { get; set; }
+    }
     public class static DurableMessagesConfig
     {
         public static void DisableDurableMessages(this NServiceBus.EndpointConfiguration config) { }
