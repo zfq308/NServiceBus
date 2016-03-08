@@ -42,6 +42,7 @@ namespace NServiceBus.Timeout.Hosting.Windows
             StartPoller();
         }
 
+        // Fake commit for stuff
         public void Stop()
         {
             TimeoutManager.TimeoutPushed = null;
