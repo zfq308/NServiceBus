@@ -2,7 +2,6 @@
 {
     using System;
     using System.Diagnostics;
-    using System.Linq;
     using System.Threading.Tasks;
     using Pipeline;
 
@@ -20,7 +19,7 @@
 
         static IBehaviorInvoker CreateInvoker(Type type)
         {
-            var behaviorInterface = type.GetInterfaces().First(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IBehavior<,>));
+            var behaviorInterface = type.GetBehaviorInterface();
             var invokerType = typeof(BehaviorInvoker<,>).MakeGenericType(behaviorInterface.GetGenericArguments());
             return (IBehaviorInvoker) Activator.CreateInstance(invokerType);
         }
