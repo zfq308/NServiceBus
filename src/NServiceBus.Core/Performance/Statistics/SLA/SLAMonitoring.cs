@@ -60,30 +60,14 @@ namespace NServiceBus.Features
         {
             public EstimatedTimeToSLABreachCounter(TimeSpan endpointSla, string counterInstanceName)
             {
-                this.endpointSla = endpointSla;
+                slaCalculator = new SlaCalculator(endpointSla, UpdateTimeToSLABreach);
                 this.counterInstanceName = counterInstanceName;
             }
 
 
             public void Update(DateTime sent, DateTime processingStarted, DateTime processingEnded)
             {
-                var dataPoint = new DataPoint
-                {
-                    CriticalTime = processingEnded - sent,
-                    ProcessingTime = processingEnded - processingStarted,
-                    OccurredAt = processingEnded
-                };
-
-                lock (dataPoints)
-                {
-                    dataPoints.Add(dataPoint);
-                    if (dataPoints.Count > MaxDataPoints)
-                    {
-                        dataPoints.RemoveRange(0, dataPoints.Count - MaxDataPoints);
-                    }
-                }
-
-                UpdateTimeToSLABreach();
+                slaCalculator.AddDataPoint(sent, processingStarted, processingEnded);
             }
 
             protected override Task OnStart(IMessageSession session)
@@ -102,18 +86,58 @@ namespace NServiceBus.Features
                 return TaskEx.CompletedTask;
             }
 
-            void UpdateTimeToSLABreach()
+            void UpdateTimeToSLABreach(int value)
             {
-                List<DataPoint> snapshots;
+                counter.RawValue = value;
+            }
 
+            void RemoveOldDataPoints(object state)
+            {
+                slaCalculator.RemoveOldDataPoints();
+            }
+
+            readonly SlaCalculator slaCalculator;
+
+            PerformanceCounter counter;
+            string counterInstanceName;
+            // ReSharper disable once NotAccessedField.Local
+            Timer timer;
+        }
+
+        /// <summary>
+        /// The class capturing the SLA calculation algorithm.
+        /// </summary>
+        public class SlaCalculator
+        {
+            /// <summary>
+            /// Initializes the calculator.
+            /// </summary>
+            /// <param name="endpointSla"></param>
+            /// <param name="reportNewSlaValue"></param>
+            public SlaCalculator(TimeSpan endpointSla, Action<int> reportNewSlaValue)
+            {
+                this.endpointSla = endpointSla;
+                this.reportNewSlaValue = reportNewSlaValue;
+            }
+
+            /// <summary>
+            /// Prunes old data points.
+            /// </summary>
+            public void RemoveOldDataPoints()
+            {
                 lock (dataPoints)
                 {
-                    snapshots = new List<DataPoint>(dataPoints);
+                    var last = dataPoints.Count == 0 ? default(DataPoint?) : dataPoints[dataPoints.Count - 1];
+
+                    if (last.HasValue)
+                    {
+                        var oldestDataToKeep = DateTime.UtcNow - new TimeSpan(last.Value.ProcessingTime.Ticks*3);
+
+                        dataPoints.RemoveAll(d => d.OccurredAt < oldestDataToKeep);
+                    }
                 }
 
-                var secondsToSLABreach = CalculateTimeToSLABreach(snapshots);
-
-                counter.RawValue = Convert.ToInt32(Math.Min(secondsToSLABreach, int.MaxValue));
+                RecalculateSlaValue();
             }
 
             double CalculateTimeToSLABreach(List<DataPoint> snapshots)
@@ -151,9 +175,9 @@ namespace NServiceBus.Features
 
                 var lastKnownCriticalTime = previous.Value.CriticalTime.TotalSeconds;
 
-                var criticalTimeDeltaPerSecond = criticalTimeDelta.TotalSeconds / elapsedTime.TotalSeconds;
+                var criticalTimeDeltaPerSecond = criticalTimeDelta.TotalSeconds/elapsedTime.TotalSeconds;
 
-                var secondsToSLABreach = (endpointSla.TotalSeconds - lastKnownCriticalTime) / criticalTimeDeltaPerSecond;
+                var secondsToSLABreach = (endpointSla.TotalSeconds - lastKnownCriticalTime)/criticalTimeDeltaPerSecond;
 
                 if (secondsToSLABreach < 0.0)
                 {
@@ -163,30 +187,47 @@ namespace NServiceBus.Features
                 return secondsToSLABreach;
             }
 
-            void RemoveOldDataPoints(object state)
+            /// <summary>
+            /// Adds new data point to the calculator
+            /// </summary>
+            public void AddDataPoint(DateTime sent, DateTime processingStarted, DateTime processingEnded)
             {
+                var dataPoint = new DataPoint
+                {
+                    CriticalTime = processingEnded - sent,
+                    ProcessingTime = processingEnded - processingStarted,
+                    OccurredAt = processingEnded
+                };
+
                 lock (dataPoints)
                 {
-                    var last = dataPoints.Count == 0 ? default(DataPoint?) : dataPoints[dataPoints.Count - 1];
-
-                    if (last.HasValue)
+                    dataPoints.Add(dataPoint);
+                    if (dataPoints.Count > MaxDataPoints)
                     {
-                        var oldestDataToKeep = DateTime.UtcNow - new TimeSpan(last.Value.ProcessingTime.Ticks * 3);
-
-                        dataPoints.RemoveAll(d => d.OccurredAt < oldestDataToKeep);
+                        dataPoints.RemoveRange(0, dataPoints.Count - MaxDataPoints);
                     }
                 }
 
-                UpdateTimeToSLABreach();
+                RecalculateSlaValue();
             }
 
-            PerformanceCounter counter;
+            void RecalculateSlaValue()
+            {
+                List<DataPoint> snapshots;
+
+                lock (dataPoints)
+                {
+                    snapshots = new List<DataPoint>(dataPoints);
+                }
+
+                var secondsToSLABreach = CalculateTimeToSLABreach(snapshots);
+                var value = Convert.ToInt32((int) Math.Min(secondsToSLABreach, int.MaxValue));
+                reportNewSlaValue(value);
+            }
+
+            readonly Action<int> reportNewSlaValue;
             List<DataPoint> dataPoints = new List<DataPoint>();
             TimeSpan endpointSla;
-            string counterInstanceName;
-            // ReSharper disable once NotAccessedField.Local
-            Timer timer;
-
             const int MaxDataPoints = 10;
 
             struct DataPoint
