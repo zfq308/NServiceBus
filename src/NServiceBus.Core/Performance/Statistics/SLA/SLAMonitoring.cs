@@ -228,7 +228,7 @@ namespace NServiceBus.Features
             readonly Action<int> reportNewSlaValue;
             List<DataPoint> dataPoints = new List<DataPoint>();
             TimeSpan endpointSla;
-            const int MaxDataPoints = 10;
+            internal const int MaxDataPoints = 10;
 
             struct DataPoint
             {
