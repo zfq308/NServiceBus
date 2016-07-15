@@ -135,45 +135,45 @@ namespace NServiceBus.Features
 
                         dataPoints.RemoveAll(d => d.OccurredAt < oldestDataToKeep);
                     }
-                }
 
-                RecalculateSlaValue();
+                    RecalculateSlaValue();
+                }
             }
 
             double CalculateTimeToSLABreach(List<DataPoint> snapshots)
             {
-                DataPoint? first = null, previous = null;
-
-                var criticalTimeDelta = TimeSpan.Zero;
-
-                foreach (var current in snapshots)
+                if (snapshots.Count < 1)
                 {
-                    if (!first.HasValue)
-                    {
-                        first = current;
-                    }
-
-                    if (previous.HasValue)
-                    {
-                        criticalTimeDelta += current.CriticalTime - previous.Value.CriticalTime;
-                    }
-
-                    previous = current;
+                    return double.MaxValue;
                 }
+
+                // as the algorithm for calculating criticalTimeDelta is following
+                //
+                // (s[1] - s[0]) + (s[2] - s[1]) + ... + (s[n] - s[n-1])
+                //
+                // it can be grouped that
+                //
+                // -s[0] + (s[1] - s[1]) + (s[2] - s[2]) + ... + s[n]
+                // 
+                // which gives
+                // s[n] - s[0]
+
+                var last = snapshots.Count - 1;
+                var criticalTimeDelta = snapshots[last].CriticalTime - snapshots[0].CriticalTime;
 
                 if (criticalTimeDelta.TotalSeconds <= 0.0)
                 {
                     return double.MaxValue;
                 }
 
-                var elapsedTime = previous.Value.OccurredAt - first.Value.OccurredAt;
+                var elapsedTime = snapshots[last].OccurredAt - snapshots[0].OccurredAt;
 
                 if (elapsedTime.TotalSeconds <= 0.0)
                 {
                     return double.MaxValue;
                 }
 
-                var lastKnownCriticalTime = previous.Value.CriticalTime.TotalSeconds;
+                var lastKnownCriticalTime = snapshots[last].CriticalTime.TotalSeconds;
 
                 var criticalTimeDeltaPerSecond = criticalTimeDelta.TotalSeconds/elapsedTime.TotalSeconds;
 
@@ -206,21 +206,14 @@ namespace NServiceBus.Features
                     {
                         dataPoints.RemoveRange(0, dataPoints.Count - MaxDataPoints);
                     }
-                }
 
-                RecalculateSlaValue();
+                    RecalculateSlaValue();
+                }
             }
 
             void RecalculateSlaValue()
             {
-                List<DataPoint> snapshots;
-
-                lock (dataPoints)
-                {
-                    snapshots = new List<DataPoint>(dataPoints);
-                }
-
-                var secondsToSLABreach = CalculateTimeToSLABreach(snapshots);
+                var secondsToSLABreach = CalculateTimeToSLABreach(dataPoints);
                 var value = Convert.ToInt32((int) Math.Min(secondsToSLABreach, int.MaxValue));
                 reportNewSlaValue(value);
             }

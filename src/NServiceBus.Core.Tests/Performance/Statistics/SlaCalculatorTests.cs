@@ -88,11 +88,13 @@
                 Add(0, 4, 5, Any);
             }
 
+            // cure with good data
             for (var i = 0; i < SLAMonitoring.SlaCalculator.MaxDataPoints; i++)
             {
                 Add(0, 1, 2, Any);
             }
 
+            // run a regular test
             Should_report_never_when_following_messages_are_handled_within_sla_from_sent_time();
         }
 
