@@ -218,7 +218,9 @@ namespace NServiceBus
                 Settings.SetDefault("PublicReturnAddress", publicReturnAddress);
             }
 
-            Settings.SetDefault<Conventions>(conventionsBuilder.Conventions);
+            var conventions = conventionsBuilder.Conventions;
+            Settings.SetDefault<Conventions>(conventions);
+            Settings.SetDefault("MessageTypes", new Lazy<List<Type>>(() => Settings.GetAvailableTypes().Where(t => conventions.IsMessageType(t)).ToList()));
 
             return new InitializableEndpoint(Settings, container, registrations, Pipeline, pipelineCollection);
         }

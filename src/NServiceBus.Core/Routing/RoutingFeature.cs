@@ -89,11 +89,7 @@
 
         static void ImportMessageEndpointMappings(FeatureConfigurationContext context, MessageEndpointMappingCollection legacyRoutingConfig, TransportInfrastructure transportInfrastructure, Publishers publishers, UnicastRoutingTable unicastRoutingTable)
         {
-            var conventions = context.Settings.Get<Conventions>();
-
-            var knownMessageTypes = context.Settings.GetAvailableTypes()
-                .Where(conventions.IsMessageType)
-                .ToList();
+            var knownMessageTypes = context.Settings.GetAvailableMessageTypes();
 
             foreach (MessageEndpointMapping m in legacyRoutingConfig)
             {

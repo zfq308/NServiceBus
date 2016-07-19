@@ -40,7 +40,7 @@
                 if (encryptionServiceConstructorDefined)
                 {
                     var message =
-                        @"Encryption service has been configured via either endpointConfiguration.RijndaelEncryptionService or endpointConfiguration.RegisterEncryptionService however no properties were found on type that require encryption. 
+                        @"Encryption service has been configured via either endpointConfiguration.RijndaelEncryptionService or endpointConfiguration.RegisterEncryptionService however no properties were found on type that require encryption.
 Ensure that either encryption message conventions are defined or to define message properties using as WireEncryptedString.";
                     log.Warn(message);
                 }
@@ -51,7 +51,7 @@ Ensure that either encryption message conventions are defined or to define messa
         static List<PropertyInfo> GetEncryptedProperties(FeatureConfigurationContext context)
         {
             var conventions = context.Settings.Get<Conventions>();
-            return context.Settings.GetAvailableTypes()
+            return context.Settings.GetAvailableMessageTypes()
                 .SelectMany(messageType => messageType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 .Where(conventions.IsEncryptedProperty)
                 .ToList();

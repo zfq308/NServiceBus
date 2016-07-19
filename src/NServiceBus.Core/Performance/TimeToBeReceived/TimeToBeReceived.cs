@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus.Features
 {
     using System;
-    using System.Linq;
     using DeliveryConstraints;
     using Performance.TimeToBeReceived;
 
@@ -28,9 +27,7 @@
 
         TimeToBeReceivedMappings GetMappings(FeatureConfigurationContext context)
         {
-            var knownMessages = context.Settings.GetAvailableTypes()
-                .Where(context.Settings.Get<Conventions>().IsMessageType)
-                .ToList();
+            var knownMessages = context.Settings.GetAvailableMessageTypes();
 
             var convention = TimeToBeReceivedMappings.DefaultConvention;
 

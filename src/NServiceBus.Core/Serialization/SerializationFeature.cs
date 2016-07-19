@@ -25,9 +25,8 @@
         {
             var mapper = new MessageMapper();
             var settings = context.Settings;
-            var conventions = settings.Get<Conventions>();
-            var messageTypes = settings.GetAvailableTypes().Where(conventions.IsMessageType);
-            mapper.Initialize(messageTypes);
+            var knownMessages = settings.GetAvailableMessageTypes();
+            mapper.Initialize(knownMessages);
 
             SerializationDefinition defaultSerializerDefinition;
 
@@ -41,10 +40,6 @@
             var additionalDeserializerDefinitions = context.Settings.Get<List<SerializationDefinition>>("AdditionalDeserializers");
             var additionalDeserializers = additionalDeserializerDefinitions.Select(d => CreateMessageSerializer(d, mapper, context)).ToArray();
             var resolver = new MessageDeserializerResolver(defaultSerializer, additionalDeserializers);
-
-            var knownMessages = context.Settings.GetAvailableTypes()
-                .Where(context.Settings.Get<Conventions>().IsMessageType)
-                .ToList();
 
             var messageMetadataRegistry = new MessageMetadataRegistry(context.Settings.Get<Conventions>());
             foreach (var msg in knownMessages)

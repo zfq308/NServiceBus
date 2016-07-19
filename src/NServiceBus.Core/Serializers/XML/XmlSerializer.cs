@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus
 {
     using System;
-    using System.Linq;
     using MessageInterfaces;
     using Serialization;
     using Settings;
@@ -19,8 +18,7 @@
             return mapper =>
             {
                 var conventions = settings.Get<Conventions>();
-                var messageTypes = settings.GetAvailableTypes()
-                    .Where(conventions.IsMessageType).ToList();
+                var messageTypes = settings.GetAvailableMessageTypes();
 
                 var serializer = new XmlMessageSerializer(mapper, conventions);
 

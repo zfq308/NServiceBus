@@ -14,12 +14,7 @@
 
         protected internal override void Setup(FeatureConfigurationContext context)
         {
-            var conventions = context.Settings.Get<Conventions>();
-
-            var knownMessages = context.Settings.GetAvailableTypes()
-                .Where(conventions.IsMessageType)
-                .ToList();
-
+            var knownMessages = context.Settings.GetAvailableMessageTypes();
             var defaultToDurableMessages = context.Settings.DurableMessagesEnabled();
 
             var nonDurableMessages = new HashSet<Type>();

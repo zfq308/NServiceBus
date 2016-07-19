@@ -48,10 +48,19 @@ namespace NServiceBus
         /// <summary>
         /// Gets the list of types available to this endpoint.
         /// </summary>
-        public static IList<Type> GetAvailableTypes(this ReadOnlySettings settings)
+        public static List<Type> GetAvailableTypes(this ReadOnlySettings settings)
         {
             Guard.AgainstNull(nameof(settings), settings);
-            return settings.Get<IList<Type>>("TypesToScan");
+            return settings.Get<List<Type>>("TypesToScan");
+        }
+
+        /// <summary>
+        /// Gets the list of message types available to this endpoint.
+        /// </summary>
+        public static List<Type> GetAvailableMessageTypes(this ReadOnlySettings settings)
+        {
+            Guard.AgainstNull(nameof(settings), settings);
+            return settings.Get<Lazy<List<Type>>>("MessageTypes").Value;
         }
 
         /// <summary>
